@@ -1,0 +1,14 @@
+.venv/
+
+records/
+priv/
+
+__pycache__/
+*.py[cod]
+
+*.swp
+*.swo
+*.bak
+*.tmp
+
+.ipynb_checkpoints/
