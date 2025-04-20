@@ -24,7 +24,7 @@ def plotter(x, y, color, y_label, plot_label):
     return fig, ax  # zwraca obiekt figury i osi
 
 # Aktualizacja wykresów
-def update_plot(in_queue, out_queue, folder='src/pics'):
+def update_plot(in_queue, out_queue, folder='src/gui/pics'):
     os.makedirs(folder, exist_ok=True)
     
     while True:
