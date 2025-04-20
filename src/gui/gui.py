@@ -1,26 +1,15 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog
-import threading
 from multiprocessing import Process, Queue
 import datetime
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib import rcParams
 import csv
 import numpy as np
 from PIL import Image, ImageTk
-
-from src.Tensometer_camera_saver import *
-from src.Tensometer_MCU_reader import read_serial
-from src.Tensometer_plots import update_plot
 import time
 
-# Ustawienia bibliotek
-plt.ioff() # Turn interactive plotting off
-rcParams['font.family'] = 'Arial'
-rcParams['lines.solid_joinstyle'] = 'miter'
-rcParams['lines.linewidth'] = 1
-rcParams['lines.antialiased'] = True  # Wyłączenie antyaliasingu dla ostrzejszych krawędzi
+from src.camera.camera_saver import *
+from src.mcu.mcu_reader import read_serial
+from src.plots.plots import update_plot
 
 # Zmienne globalne
 camera_index = None
@@ -49,8 +38,9 @@ fig = None
 canvas_frames = []
 
 
-def create_GUI():
-    global root, recording_indicator, recording_label, camera_label, canvas_frames
+def create_GUI(cam_idx):
+    global root, recording_indicator, recording_label, camera_label, canvas_frames, camera_index
+    camera_index = cam_idx
     
     gui_color = "#222222"
 
@@ -110,6 +100,8 @@ def create_GUI():
     root.grid_rowconfigure(1, weight=0)
     root.grid_rowconfigure(2, weight=0)
     root.grid_rowconfigure(3, weight=1)  # Daje wagę wierszowi z przyciskami
+
+    return root
 
 # Funkcja obsługi kamerki
 def camera_stream():
@@ -187,7 +179,7 @@ def stop_recording():
     
     if csv_file:
         data_to_save = np.array(data_to_save)
-        data_to_save[:,0] = data_to_save[:,0] - data_to_save[0,0] # Czas liczony jest od podłączenia MCU do PC, dlatego dla danych z konkretnego pomiaru robimy przesunięcie do 0 s
+        # data_to_save[:,0] = data_to_save[:,0] - data_to_save[0,0] # Czas liczony jest od podłączenia MCU do PC, dlatego dla danych z konkretnego pomiaru robimy przesunięcie do 0 s
         for row in data_to_save:
             csv_writer.writerow(row)
         csv_file.close()
@@ -204,7 +196,7 @@ def toggle_recording_indicator():
             
 # Tworzenie filmu ze zdjec
 def create_movie():
-    video_name = os.path.join(recording_folder, recording_folder + '.mp4')
+    video_name = os.path.join(recording_folder, filename + '.mp4')
 
     images = sorted([img for img in os.listdir(recording_folder) if img.endswith(".png")])
     frame = cv2.imread(os.path.join(recording_folder, images[0]))
@@ -266,28 +258,3 @@ def get_plot():
 def reset_plots():
     global start_plot_index
     start_plot_index = len(data_log) - 1
-
-def main():
-    global camera_index
-    
-    # Ręczne wpisanie numeru kamery
-    camera_index = simpledialog.askinteger("Wybór kamery", "Podaj numer kamery:", minvalue=0, maxvalue=9)
-    
-    create_GUI()
-    
-    # Uruchomienie wątku kamery
-    threading.Thread(target=camera_stream, daemon=True).start()
-    
-    # Nawiązanie komunikacji z MCU
-    MCU_comunication()
-    # Uruchomienie wątku MCU
-    threading.Thread(target=MCU_collect_data, daemon=True).start()
-    
-    create_plot()
-    # # Uruchomienie wątku plottera
-    threading.Thread(target=get_plot, daemon=True).start()
-    
-    root.mainloop()
-
-if __name__ == "__main__":
-    main()
